@@ -1,9 +1,19 @@
 # import the necessary packages
 from helpers import pyramid
 from helpers import sliding_window
+from PIL import Image
+from keras.models import model_from_yaml
+from keras.models import load_model
 import argparse
 import time
 import cv2
+
+
+#import ergo model
+
+model = load_model("model.h5")
+#model = model_from_yaml("model.yml")
+#model.load_weights("model.h5")
 
 # construct the argument parser and parse the arguments
 ap = argparse.ArgumentParser()
@@ -17,7 +27,7 @@ image = cv2.imread(args["image"])
 # loop over the image pyramid
 for resized in pyramid(image, scale=1.5):
     # loop over the sliding window for each layer of the pyramid
-    for (x, y, window) in sliding_window(resized, stepSize=32, windowSize=(winW, winH)):
+    for (x, y, window) in sliding_window(resized, stepSize=20, windowSize=(winW, winH)):
         # if the window does not meet our desired window size, ignore it
         if window.shape[0] != winH or window.shape[1] != winW:
             continue
@@ -25,7 +35,16 @@ for resized in pyramid(image, scale=1.5):
         # THIS IS WHERE YOU WOULD PROCESS YOUR WINDOW, SUCH AS APPLYING A
         # MACHINE LEARNING CLASSIFIER TO CLASSIFY THE CONTENTS OF THE
         # WINDOW
+        print('Window Shape ' + str(window.shape))
+        #print('Resized Shape' + str(window.shape))
+        temp = window.reshape(-1, 1200)
+        print('temp: ' + str(temp.shape))
 
+        result = model.predict(temp)
+        print("Result: " + str(result))
+        if result >= 0.5:
+            cv2.rectangle((x, y), (x + winW, y + winH), (0, 0, 255), 2)
+            continue
 
         # since we do not have a classifier, we'll just draw the window
         clone = resized.copy()
